@@ -24,3 +24,29 @@ provider "azurerm" {
 provider "cloudinit" {
   # Configuration options
 }
+
+variable "labelPrefix" {
+  type        = string
+  description = "Your college username. Used for naming resources."
+}
+
+variable "region" {
+  type        = string
+  default     = "canadacentral"
+}
+
+variable "admin_username" {
+  type        = string
+  default     = "azureadmin"
+}
+resource "azurerm_resource_group" "rg" {
+  name     = "${var.labelPrefix}-A05-RG"
+  location = var.region
+}
+resource "azurerm_public_ip" "pip" {
+  name                = "${var.labelPrefix}-pip"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
