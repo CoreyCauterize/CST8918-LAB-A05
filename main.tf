@@ -104,7 +104,57 @@ resource "azurerm_network_interface" "nic" {
     public_ip_address_id          = azurerm_public_ip.pip.id
   }
 }
-resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
+resource "azurerm_network_interface_security_group_association" "assoc" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
+data "cloudinit_config" "init" {
+  gzip          = false
+  base64_encode = false
+
+  part {
+    filename     = "init.sh"
+    content_type = "text/x-shellscript"
+    content      = file("${path.module}/init.sh")
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "vm" {
+  name                = "${var.labelPrefix}-vm"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  size                = "Standard_B2as_v2"
+
+  admin_username = var.admin_username
+
+  network_interface_ids = [
+    azurerm_network_interface.nic.id
+  ]
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file("C:/Users/corey/.ssh/id_rsa.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+ custom_data = base64encode(data.cloudinit_config.init.rendered)
+}
+
+output "resource_group_name" {
+  value = azurerm_resource_group.rg.name
+}
+output "public_ip_address" {
+  value = azurerm_public_ip.pip.ip_address
 }
